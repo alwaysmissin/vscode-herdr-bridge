@@ -82,6 +82,19 @@ npm run compile
 
 Press `F5` in VS Code to launch an Extension Development Host, or run `npm run test:integration` for the activation smoke test.
 
+## Release
+
+GitHub Actions builds and tests every push and pull request. Successful runs attach `vscode-herdr-bridge.vsix` and its SHA-256 checksum as workflow artifacts for 14 days.
+
+To publish a GitHub Release, update the version in `package.json` and `package-lock.json`, commit the change, then push a matching tag:
+
+```bash
+git tag v0.1.2
+git push origin v0.1.2
+```
+
+The tag must equal `v` followed by the package version. After all checks pass, CI creates the release notes and uploads the VSIX and checksum automatically.
+
 ## License
 
 MIT
