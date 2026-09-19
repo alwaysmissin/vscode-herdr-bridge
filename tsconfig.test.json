@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "noEmit": false,
+    "outDir": "out-test",
+    "rootDir": ".",
+    "types": ["node"]
+  },
+  "include": [
+    "src/types.ts",
+    "src/herdr.ts",
+    "src/contextPayload.ts",
+    "test/unit/**/*.ts"
+  ]
+}

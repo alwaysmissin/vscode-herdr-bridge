@@ -1,0 +1,153 @@
+{
+  "name": "vscode-herdr-bridge",
+  "displayName": "Herdr Bridge",
+  "description": "Send VS Code file and source context to an agent running in Herdr.",
+  "version": "0.1.2",
+  "publisher": "kinder",
+  "license": "MIT",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/alwaysmissin/vscode-herdr-bridge.git"
+  },
+  "engines": {
+    "vscode": "^1.100.0"
+  },
+  "categories": [
+    "Other",
+    "AI"
+  ],
+  "keywords": [
+    "herdr",
+    "agent",
+    "terminal",
+    "context"
+  ],
+  "extensionKind": [
+    "workspace"
+  ],
+  "files": [
+    "dist/**",
+    "README.md",
+    "LICENSE"
+  ],
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "herdrBridge.sendContext",
+        "title": "Send Selection or Current Symbol",
+        "category": "Herdr"
+      },
+      {
+        "command": "herdrBridge.sendRelativePath",
+        "title": "Send Relative Path",
+        "category": "Herdr"
+      },
+      {
+        "command": "herdrBridge.sendAbsolutePath",
+        "title": "Send Absolute Path",
+        "category": "Herdr"
+      },
+      {
+        "command": "herdrBridge.selectAgent",
+        "title": "Select Target Agent",
+        "category": "Herdr"
+      },
+      {
+        "command": "herdrBridge.refreshAgents",
+        "title": "Refresh Agents",
+        "category": "Herdr"
+      },
+      {
+        "command": "herdrBridge.showOutput",
+        "title": "Show Output",
+        "category": "Herdr"
+      }
+    ],
+    "submenus": [
+      {
+        "id": "herdrBridge.fileMenu",
+        "label": "Herdr"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "herdrBridge.sendContext",
+          "when": "editorTextFocus",
+          "group": "z_commands@50"
+        }
+      ],
+      "explorer/context": [
+        {
+          "submenu": "herdrBridge.fileMenu",
+          "when": "resourceScheme == file && !explorerResourceIsFolder",
+          "group": "6_copypath@50"
+        }
+      ],
+      "editor/title/context": [
+        {
+          "submenu": "herdrBridge.fileMenu",
+          "when": "resourceScheme == file",
+          "group": "2_files@50"
+        }
+      ],
+      "herdrBridge.fileMenu": [
+        {
+          "command": "herdrBridge.sendRelativePath",
+          "group": "1_path@1"
+        },
+        {
+          "command": "herdrBridge.sendAbsolutePath",
+          "group": "1_path@2"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Herdr Bridge",
+      "properties": {
+        "herdrBridge.binPath": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Absolute path to the `herdr` executable. Empty searches `PATH`, `~/.local/bin`, and `~/.cargo/bin`."
+        },
+        "herdrBridge.commandTimeoutMs": {
+          "type": "number",
+          "default": 10000,
+          "minimum": 1000,
+          "maximum": 120000,
+          "description": "Timeout for each Herdr CLI invocation, in milliseconds."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "node esbuild.mjs",
+    "watch": "node esbuild.mjs --watch",
+    "check-types": "tsc --noEmit",
+    "compile": "npm run check-types && npm run build",
+    "lint": "eslint src test esbuild.mjs",
+    "test:unit": "tsc -p tsconfig.test.json && node --test \"out-test/test/unit/*.test.js\"",
+    "test:integration": "npm run compile && tsc -p tsconfig.integration.json && node out-test/test/integration/runTest.js",
+    "test": "npm run test:unit",
+    "package": "npm run compile && vsce package --no-dependencies --out vscode-herdr-bridge.vsix"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^24.0.0",
+    "@types/vscode": "^1.100.0",
+    "@typescript-eslint/eslint-plugin": "^8.46.0",
+    "@typescript-eslint/parser": "^8.46.0",
+    "@vscode/test-electron": "^2.5.2",
+    "@vscode/vsce": "^3.6.2",
+    "esbuild": "^0.25.11",
+    "eslint": "^9.38.0",
+    "mocha": "^11.7.4",
+    "typescript-eslint": "^8.46.0",
+    "typescript": "^5.9.3"
+  }
+}
