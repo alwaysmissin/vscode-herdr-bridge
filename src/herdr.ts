@@ -234,7 +234,7 @@ export function wrapBracketedPaste(text: string): string {
   const sanitized = text
     .replaceAll(BRACKETED_PASTE_START, "")
     .replaceAll(BRACKETED_PASTE_END, "");
-  return `${BRACKETED_PASTE_START}${sanitized}${BRACKETED_PASTE_END}`;
+  return `${BRACKETED_PASTE_START}${sanitized}\n${BRACKETED_PASTE_END}`;
 }
 
 export function isReadyStatus(status: AgentStatus): boolean {

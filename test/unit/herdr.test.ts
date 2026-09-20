@@ -69,7 +69,11 @@ test("parseAgentsJson reads Herdr's generated conversation title", () => {
 
 test("wrapBracketedPaste strips nested terminal markers", () => {
   const wrapped = wrapBracketedPaste(`before\u001b[200~inside\u001b[201~after`);
-  assert.equal(wrapped, "\u001b[200~beforeinsideafter\u001b[201~");
+  assert.equal(wrapped, "\u001b[200~beforeinsideafter\n\u001b[201~");
+});
+
+test("wrapBracketedPaste ends the paste with a newline so consecutive inserts start on a fresh line", () => {
+  assert.equal(wrapBracketedPaste("payload"), "\u001b[200~payload\n\u001b[201~");
 });
 
 test("only idle and done agents are ready", () => {
