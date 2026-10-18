@@ -5,6 +5,7 @@ import {
   isReadyStatus,
   parseAgentsJson,
   parseSessionsJson,
+  sortAgentsForPicker,
   wrapBracketedPaste,
 } from "../../src/herdr";
 
@@ -33,6 +34,7 @@ test("parseAgentsJson tolerates optional fields and normalizes unknown status", 
     displayName: "codex",
     conversationTitle: undefined,
     status: "unknown",
+    focused: false,
     cwd: "/work/project",
     foregroundCwd: undefined,
     workspaceId: undefined,
@@ -67,6 +69,15 @@ test("parseAgentsJson reads Herdr's generated conversation title", () => {
   assert.equal(agent.conversationTitle, "简化 VS Code 向 herdr 发送代码");
 });
 
+test("parseAgentsJson reads the focused pane flag", () => {
+  const agents = parseAgentsJson(JSON.stringify({ result: { agents: [
+    { agent: "codex", pane_id: "w8:p1", agent_status: "idle", focused: true },
+    { agent: "claude", pane_id: "w8:p2", agent_status: "idle" },
+  ] } }), "default");
+  assert.equal(agents[0].focused, true);
+  assert.equal(agents[1].focused, false);
+});
+
 test("wrapBracketedPaste strips nested terminal markers", () => {
   const wrapped = wrapBracketedPaste(`before\u001b[200~inside\u001b[201~after`);
   assert.equal(wrapped, "\u001b[200~beforeinsideafter\n\u001b[201~");
@@ -92,8 +103,40 @@ test("agentWorkspaceRank favors the current workspace", () => {
     displayName: "codex",
     conversationTitle: undefined,
     status: "idle" as const,
+    focused: false,
   };
   assert.equal(agentWorkspaceRank({ ...base, cwd: "/work/project" }, ["/work/project"]), 0);
   assert.equal(agentWorkspaceRank({ ...base, cwd: "/work/project/subdir" }, ["/work/project"]), 1);
   assert.equal(agentWorkspaceRank({ ...base, cwd: "/other" }, ["/work/project"]), 2);
 });
+
+test("sortAgentsForPicker puts the focused agent first regardless of workspace", () => {
+  const base = {
+    sessionName: "default",
+    kind: "codex",
+    displayName: "codex",
+    conversationTitle: undefined,
+    status: "idle" as const,
+  };
+  const outside = { ...base, paneId: "w1:p1", cwd: "/other", focused: false };
+  const matching = { ...base, paneId: "w1:p2", cwd: "/work/project", focused: false };
+  const focused = { ...base, paneId: "w1:p3", cwd: "/other", focused: true };
+  const sorted = sortAgentsForPicker([outside, matching, focused], ["/work/project"]);
+  assert.deepEqual(sorted.map((agent) => agent.paneId), ["w1:p3", "w1:p2", "w1:p1"]);
+});
+
+test("sortAgentsForPicker breaks ties by session and pane id", () => {
+  const base = {
+    kind: "codex",
+    displayName: "codex",
+    conversationTitle: undefined,
+    status: "idle" as const,
+    focused: false,
+  };
+  const sorted = sortAgentsForPicker([
+    { ...base, sessionName: "default", paneId: "w1:p2" },
+    { ...base, sessionName: "default", paneId: "w1:p1" },
+  ], []);
+  assert.deepEqual(sorted.map((agent) => agent.paneId), ["w1:p1", "w1:p2"]);
+});
+

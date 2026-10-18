@@ -16,6 +16,7 @@ export interface HerdrAgent {
   displayName: string;
   conversationTitle?: string;
   status: AgentStatus;
+  focused: boolean;
   cwd?: string;
   foregroundCwd?: string;
   workspaceId?: string;

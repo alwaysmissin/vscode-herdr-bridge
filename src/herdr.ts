@@ -133,6 +133,7 @@ export function parseAgentsJson(stdout: string, sessionName: string): HerdrAgent
       displayName,
       conversationTitle: conversationTitle(item, cwd),
       status: normalizeStatus(item.agent_status),
+      focused: booleanValue(item.focused) ?? false,
       cwd: stringValue(item.cwd),
       foregroundCwd: stringValue(item.foreground_cwd),
       workspaceId: stringValue(item.workspace_id),
@@ -261,6 +262,22 @@ export function agentWorkspaceRank(agent: HerdrAgent, workspaceRoots: readonly s
     return 0;
   }
   return roots.some((root) => contains(root, agentPath) || contains(agentPath, root)) ? 1 : 2;
+}
+
+export function sortAgentsForPicker(
+  agents: readonly HerdrAgent[],
+  workspaceRoots: readonly string[],
+): HerdrAgent[] {
+  return [...agents].sort((left, right) => {
+    if (left.focused !== right.focused) {
+      return left.focused ? -1 : 1;
+    }
+    const rank = agentWorkspaceRank(left, workspaceRoots) - agentWorkspaceRank(right, workspaceRoots);
+    if (rank !== 0) {
+      return rank;
+    }
+    return `${left.sessionName}:${left.paneId}`.localeCompare(`${right.sessionName}:${right.paneId}`);
+  });
 }
 
 export class HerdrClient {

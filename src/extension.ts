@@ -8,10 +8,10 @@ import {
   type WorkspaceRoot,
 } from "./contextPayload";
 import {
-  agentWorkspaceRank,
   HerdrClient,
   HerdrCommandError,
   isReadyStatus,
+  sortAgentsForPicker,
 } from "./herdr";
 import type { AgentBinding, HerdrAgent } from "./types";
 
@@ -305,13 +305,7 @@ class HerdrBridge implements vscode.Disposable {
 
   private sortedAgents(agents: readonly HerdrAgent[]): HerdrAgent[] {
     const roots = this.workspaceRoots().map((root) => root.fsPath);
-    return [...agents].sort((left, right) => {
-      const rank = agentWorkspaceRank(left, roots) - agentWorkspaceRank(right, roots);
-      if (rank !== 0) {
-        return rank;
-      }
-      return `${left.sessionName}:${left.paneId}`.localeCompare(`${right.sessionName}:${right.paneId}`);
-    });
+    return sortAgentsForPicker(agents, roots);
   }
 
   private async pickAgent(agents?: readonly HerdrAgent[]): Promise<AgentBinding | undefined> {

@@ -5,6 +5,7 @@ Herdr Bridge connects a VS Code workspace to an agent running in a local Herdr s
 ## Features
 
 - Select the target agent from the VS Code status bar. The binding is stored per workspace.
+- List the agent in Herdr's currently focused pane first, then agents in the current workspace.
 - Show the current Claude or Codex conversation title reported by Herdr, such as `Read page tables`, in the agent picker and status bar.
 - Discover agents in every running default or named Herdr session on the same host as the VS Code extension host.
 - Send all nonempty editor selections. With no selection, send the innermost symbol under the cursor. With no symbol, send the current file path.
