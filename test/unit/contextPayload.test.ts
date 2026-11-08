@@ -34,6 +34,22 @@ test("relativeDisplayPath prefixes the folder in a multi-root workspace", () => 
   assert.equal(relativeDisplayPath("/elsewhere/app.ts", roots), undefined);
 });
 
+test("relativeDisplayPath maps a workspace root folder to a usable reference", () => {
+  const single = [{ name: "client", fsPath: "/work/client" }];
+  const multi = [...single, { name: "server", fsPath: "/work/server" }];
+  assert.equal(relativeDisplayPath("/work/client", single), ".");
+  assert.equal(relativeDisplayPath("/work/client", multi), "client");
+});
+
+test("buildPayload labels folders separately from files", () => {
+  const payload = buildPayload([
+    { path: "src/components", directory: true },
+    { path: "src/app.ts" },
+  ]);
+  assert.match(payload, /^Directory: src\/components$/m);
+  assert.match(payload, /^File: src\/app\.ts$/m);
+});
+
 test("buildPayload renders source locations and summaries", () => {
   const payload = buildPayload([{
     path: "src/app.ts",

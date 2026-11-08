@@ -12,6 +12,7 @@
     "src/types.ts",
     "src/herdr.ts",
     "src/contextPayload.ts",
+    "src/selection.ts",
     "test/unit/**/*.ts"
   ]
 }

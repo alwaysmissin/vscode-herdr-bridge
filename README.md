@@ -9,7 +9,8 @@ Herdr Bridge connects a VS Code workspace to an agent running in a local Herdr s
 - Show the current Claude or Codex conversation title reported by Herdr, such as `Read page tables`, in the agent picker and status bar.
 - Discover agents in every running default or named Herdr session on the same host as the VS Code extension host.
 - Send all nonempty editor selections. With no selection, send the innermost symbol under the cursor. With no symbol, send the current file path.
-- Send a relative or absolute path from the Explorer and editor-tab context menus.
+- Send a relative or absolute path for one or many selected files or folders from the Explorer and editor-tab context menus.
+- Send every selected Explorer item as a single payload, with files rendered as `File: <path>` and folders as `Directory: <path>`.
 - Paste only to agents whose Herdr status is `idle` or `done`.
 - Focus the target Herdr pane after a successful paste.
 - Limit payloads to 64 KiB. Long selections include the first three and last three lines; oversized payloads fall back to references only.
@@ -32,7 +33,7 @@ The extension runs where the workspace runs. For Remote SSH or WSL workspaces, H
 2. Open a VS Code workspace on the same host.
 3. Click `Herdr: Select Agent` in the status bar and choose an agent.
 4. Select source in an editor, or place the cursor inside a symbol, then choose **Herdr: Send Selection or Current Symbol** from the editor context menu.
-5. For a file reference, open the **Herdr** submenu in the Explorer or editor-tab context menu and choose a relative or absolute path.
+5. For a path reference, select one or more files or folders in the Explorer (or right-click an editor tab), open the **Herdr** submenu, and choose a relative or absolute path. A multi-selection is sent as one payload and folders are sent as directory references rather than expanded.
 
 The extension wraps the payload in bracketed-paste markers and calls:
 

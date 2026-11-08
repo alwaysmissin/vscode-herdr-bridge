@@ -11,6 +11,7 @@ export interface WorkspaceRoot {
 
 export interface ContextBlock {
   path: string;
+  directory?: boolean;
   startLine?: number;
   endLine?: number;
   symbolKind?: string;
@@ -49,7 +50,8 @@ export function summarizeSource(source: string): string[] {
 }
 
 function renderBlock(block: ContextBlock, includeSource: boolean): string {
-  const lines = [`File: ${block.path}`];
+  const heading = block.directory ? "Directory" : "File";
+  const lines = [`${heading}: ${block.path}`];
   if (block.symbolName) {
     const kind = block.symbolKind ? `${block.symbolKind} ` : "";
     lines.push(`Symbol: ${kind}${block.symbolName}`);
@@ -108,5 +110,8 @@ export function relativeDisplayPath(
     return undefined;
   }
   const relative = path.relative(root.fsPath, filePath).split(path.sep).join("/");
+  if (relative === "") {
+    return roots.length > 1 ? root.name : ".";
+  }
   return roots.length > 1 ? `${root.name}/${relative}` : relative;
 }

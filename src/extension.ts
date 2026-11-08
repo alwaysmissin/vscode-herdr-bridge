@@ -13,6 +13,7 @@ import {
   isReadyStatus,
   sortAgentsForPicker,
 } from "./herdr";
+import { selectResources } from "./selection";
 import type { AgentBinding, HerdrAgent } from "./types";
 
 const BINDING_KEY = "herdrBridge.targetAgent";
@@ -45,8 +46,10 @@ class HerdrBridge implements vscode.Disposable {
     this.status.show();
 
     this.register("herdrBridge.sendContext", (uri?: vscode.Uri) => this.sendEditorContext(uri));
-    this.register("herdrBridge.sendRelativePath", (uri?: vscode.Uri) => this.sendFile(uri, "relative"));
-    this.register("herdrBridge.sendAbsolutePath", (uri?: vscode.Uri) => this.sendFile(uri, "absolute"));
+    this.register("herdrBridge.sendRelativePath", (uri?: vscode.Uri, selection?: vscode.Uri[]) =>
+      this.sendPaths(uri, selection, "relative"));
+    this.register("herdrBridge.sendAbsolutePath", (uri?: vscode.Uri, selection?: vscode.Uri[]) =>
+      this.sendPaths(uri, selection, "absolute"));
     this.register("herdrBridge.selectAgent", () => this.selectAgent());
     this.register("herdrBridge.refreshAgents", () => this.refreshAgents());
     this.register("herdrBridge.showOutput", () => this.output.show());
@@ -170,7 +173,7 @@ class HerdrBridge implements vscode.Disposable {
         void vscode.window.showWarningMessage("Herdr: select text in this untitled document first.");
         return;
       }
-      await this.sendFile(uri, "relative");
+      await this.sendPaths(uri, undefined, "relative");
     } catch (error) {
       this.handleError(error);
     }
@@ -239,35 +242,80 @@ class HerdrBridge implements vscode.Disposable {
       })[0];
   }
 
-  private async sendFile(uriArg: vscode.Uri | undefined, mode: "relative" | "absolute"): Promise<void> {
+  private async isDirectory(uri: vscode.Uri): Promise<boolean> {
     try {
-      const uri = this.activeUri(uriArg);
-      if (!uri || uri.scheme !== "file") {
-        void vscode.window.showWarningMessage("Herdr: this command requires a file on disk.");
+      const stat = await vscode.workspace.fs.stat(uri);
+      return (stat.type & vscode.FileType.Directory) !== 0;
+    } catch (error) {
+      this.log(`Could not inspect ${uri.fsPath}: ${String(error)}`);
+      return false;
+    }
+  }
+
+  private pathText(uri: vscode.Uri, mode: "relative" | "absolute"): string | undefined {
+    return mode === "absolute"
+      ? uri.fsPath
+      : relativeDisplayPath(uri.fsPath, this.workspaceRoots());
+  }
+
+  private async sendPaths(
+    uriArg: vscode.Uri | undefined,
+    selectionArg: vscode.Uri[] | undefined,
+    mode: "relative" | "absolute",
+  ): Promise<void> {
+    try {
+      const active = vscode.window.activeTextEditor?.document.uri;
+      const selected = selectResources(uriArg, selectionArg);
+      const resources = selected.length > 0 ? selected : active ? [active] : [];
+      if (resources.length === 0) {
+        void vscode.window.showWarningMessage("Herdr: no file or folder is selected.");
         return;
       }
-      let pathText: string;
-      if (mode === "relative") {
-        const relative = relativeDisplayPath(uri.fsPath, this.workspaceRoots());
-        if (!relative) {
-          void vscode.window.showWarningMessage(
-            "Herdr: the file is outside every workspace folder. Use Send Absolute Path instead.",
-          );
-          return;
-        }
-        pathText = relative;
-      } else {
-        pathText = uri.fsPath;
+      if (resources.some((uri) => uri.scheme !== "file")) {
+        void vscode.window.showWarningMessage(
+          "Herdr: this command requires files or folders on disk.",
+        );
+        return;
       }
 
-      const openDocument = vscode.workspace.textDocuments.find(
-        (document) => document.uri.toString() === uri.toString(),
+      const inspected = await Promise.all(resources.map(async (uri) => ({
+        uri,
+        text: this.pathText(uri, mode),
+        directory: await this.isDirectory(uri),
+      })));
+
+      const entries: { uri: vscode.Uri; text: string; directory: boolean }[] = [];
+      let outsideCount = 0;
+      for (const entry of inspected) {
+        if (entry.text === undefined) {
+          outsideCount += 1;
+        } else {
+          entries.push({ uri: entry.uri, text: entry.text, directory: entry.directory });
+        }
+      }
+      if (outsideCount > 0) {
+        void vscode.window.showWarningMessage(
+          outsideCount === 1
+            ? "Herdr: the selected item is outside every workspace folder. Use Send Absolute Path instead."
+            : `Herdr: ${outsideCount} selected items are outside every workspace folder. Use Send Absolute Path instead.`,
+        );
+        return;
+      }
+
+      const dirty = new Set(
+        entries
+          .filter((entry) => vscode.workspace.textDocuments.some(
+            (document) => document.uri.toString() === entry.uri.toString() && document.isDirty,
+          ))
+          .map((entry) => entry.uri.toString()),
       );
       let note: string | undefined;
-      if (openDocument?.isDirty) {
+      if (dirty.size > 0) {
         const send = "Send Saved Version";
         const choice = await vscode.window.showWarningMessage(
-          "This file has unsaved changes. The agent can only read the saved version from this path.",
+          dirty.size === 1
+            ? "This file has unsaved changes. The agent can only read the saved version from this path."
+            : `${dirty.size} selected files have unsaved changes. The agent can only read the saved versions from these paths.`,
           { modal: true },
           send,
         );
@@ -276,7 +324,13 @@ class HerdrBridge implements vscode.Disposable {
         }
         note = "This file has unsaved changes; the path refers to the saved version on disk.";
       }
-      await this.deliver(buildPayload([{ path: pathText, note }]));
+
+      const blocks: ContextBlock[] = entries.map((entry) => ({
+        path: entry.text,
+        directory: entry.directory,
+        note: dirty.has(entry.uri.toString()) ? note : undefined,
+      }));
+      await this.deliver(buildPayload(blocks));
     } catch (error) {
       this.handleError(error);
     }
@@ -449,7 +503,7 @@ class HerdrBridge implements vscode.Disposable {
   private handleError(error: unknown): void {
     if (error instanceof PayloadTooLargeError) {
       void vscode.window.showErrorMessage(
-        "Herdr: the context references still exceed 64 KiB. Select fewer ranges.",
+        "Herdr: the context references still exceed 64 KiB. Select fewer files or ranges.",
       );
       return;
     }

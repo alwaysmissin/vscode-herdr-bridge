@@ -85,7 +85,7 @@
       "explorer/context": [
         {
           "submenu": "herdrBridge.fileMenu",
-          "when": "resourceScheme == file && !explorerResourceIsFolder",
+          "when": "resourceScheme == file",
           "group": "6_copypath@50"
         }
       ],
