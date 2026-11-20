@@ -9,5 +9,7 @@ suite("Herdr Bridge", () => {
     const commands = await vscode.commands.getCommands(true);
     assert.ok(commands.includes("herdrBridge.selectAgent"));
     assert.ok(commands.includes("herdrBridge.sendContext"));
+    assert.ok(commands.includes("herdrBridge.sendTerminalSelection"));
+    assert.ok(commands.includes("herdrBridge.sendLastTerminalCommand"));
   });
 });

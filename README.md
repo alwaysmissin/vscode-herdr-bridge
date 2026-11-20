@@ -11,6 +11,7 @@ Herdr Bridge connects a VS Code workspace to an agent running in a local Herdr s
 - Send all nonempty editor selections. With no selection, send the innermost symbol under the cursor. With no symbol, send the current file path.
 - Send a relative or absolute path for one or many selected files or folders from the Explorer and editor-tab context menus.
 - Send every selected Explorer item as a single payload, with files rendered as `File: <path>` and folders as `Directory: <path>`.
+- Send selected text or the latest completed command and its available output from the active VS Code terminal.
 - Paste only to agents whose Herdr status is `idle` or `done`.
 - Focus the target Herdr pane after a successful paste.
 - Limit payloads to 64 KiB. Long selections include the first three and last three lines; oversized payloads fall back to references only.
@@ -44,6 +45,12 @@ herdr --session <session> agent focus <pane-id>
 
 It does not submit the agent input. Review the pasted context in Herdr and press Enter when ready.
 
+### Terminal context
+
+In the active integrated terminal's context menu or the Command Palette, choose **Herdr: Send Terminal Selection** for selected text, or **Herdr: Send Last Terminal Command and Output** for the latest completed command. The latter requires VS Code Shell Integration; when no output is available, only the command is sent. Review what you select or run before sending it, since terminal text can contain secrets.
+
+Both commands briefly use your system clipboard and try to restore its previous plain text. Images and rich clipboard formats are not preserved. Terminal content over 64 KiB is shortened to its beginning and end, with a truncation notice.
+
 ### Agent labels
 
 Herdr Bridge automatically reads `terminal_title_stripped` from `herdr agent list`. The picker combines the agent kind and generated conversation title, for example `codex · Read page tables`. Codex's trailing ` | <working-directory>` suffix is removed when it matches the agent working directory.
@@ -64,6 +71,8 @@ When both a custom name and generated conversation title exist, the main label i
 - `Herdr: Select Target Agent`
 - `Herdr: Refresh Agents`
 - `Herdr: Send Selection or Current Symbol`
+- `Herdr: Send Terminal Selection`
+- `Herdr: Send Last Terminal Command and Output`
 - `Herdr: Send Relative Path`
 - `Herdr: Send Absolute Path`
 - `Herdr: Show Output`

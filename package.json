@@ -2,7 +2,7 @@
   "name": "vscode-herdr-bridge",
   "displayName": "Herdr Bridge",
   "description": "Send VS Code file and source context to an agent running in Herdr.",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "publisher": "kinder",
   "license": "MIT",
   "private": true,
@@ -43,6 +43,16 @@
         "category": "Herdr"
       },
       {
+        "command": "herdrBridge.sendTerminalSelection",
+        "title": "Send Terminal Selection",
+        "category": "Herdr"
+      },
+      {
+        "command": "herdrBridge.sendLastTerminalCommand",
+        "title": "Send Last Terminal Command and Output",
+        "category": "Herdr"
+      },
+      {
         "command": "herdrBridge.sendRelativePath",
         "title": "Send Relative Path",
         "category": "Herdr"
@@ -75,6 +85,16 @@
       }
     ],
     "menus": {
+      "terminal/context": [
+        {
+          "command": "herdrBridge.sendTerminalSelection",
+          "group": "z_herdr@1"
+        },
+        {
+          "command": "herdrBridge.sendLastTerminalCommand",
+          "group": "z_herdr@2"
+        }
+      ],
       "editor/context": [
         {
           "command": "herdrBridge.sendContext",

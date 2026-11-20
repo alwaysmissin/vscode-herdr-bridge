@@ -14,6 +14,7 @@ import {
   sortAgentsForPicker,
 } from "./herdr";
 import { selectResources } from "./selection";
+import { buildTerminalPayload, TerminalClipboard, type TerminalContextKind } from "./terminalContext";
 import type { AgentBinding, HerdrAgent } from "./types";
 
 const BINDING_KEY = "herdrBridge.targetAgent";
@@ -36,6 +37,11 @@ class HerdrBridge implements vscode.Disposable {
     50,
   );
   private readonly disposables: vscode.Disposable[] = [this.output, this.status];
+  private readonly terminalClipboard = new TerminalClipboard(
+    vscode.env.clipboard,
+    (command) => vscode.commands.executeCommand(command),
+  );
+  private terminalRevision = 0;
   private client: HerdrClient;
 
   constructor(private readonly context: vscode.ExtensionContext) {
@@ -46,6 +52,8 @@ class HerdrBridge implements vscode.Disposable {
     this.status.show();
 
     this.register("herdrBridge.sendContext", (uri?: vscode.Uri) => this.sendEditorContext(uri));
+    this.register("herdrBridge.sendTerminalSelection", () => this.sendTerminalContext("selection"));
+    this.register("herdrBridge.sendLastTerminalCommand", () => this.sendTerminalContext("lastCommand"));
     this.register("herdrBridge.sendRelativePath", (uri?: vscode.Uri, selection?: vscode.Uri[]) =>
       this.sendPaths(uri, selection, "relative"));
     this.register("herdrBridge.sendAbsolutePath", (uri?: vscode.Uri, selection?: vscode.Uri[]) =>
@@ -54,6 +62,7 @@ class HerdrBridge implements vscode.Disposable {
     this.register("herdrBridge.refreshAgents", () => this.refreshAgents());
     this.register("herdrBridge.showOutput", () => this.output.show());
     this.disposables.push(
+      vscode.window.onDidChangeActiveTerminal(() => { this.terminalRevision++; }),
       vscode.workspace.onDidChangeConfiguration((event) => {
         if (event.affectsConfiguration("herdrBridge")) {
           this.client = this.createClient();
@@ -138,6 +147,36 @@ class HerdrBridge implements vscode.Disposable {
   private activeEditorFor(uri: vscode.Uri): vscode.TextEditor | undefined {
     const editor = vscode.window.activeTextEditor;
     return editor?.document.uri.toString() === uri.toString() ? editor : undefined;
+  }
+
+  private async sendTerminalContext(kind: TerminalContextKind): Promise<void> {
+    const terminal = vscode.window.activeTerminal;
+    if (!terminal) {
+      void vscode.window.showWarningMessage("Herdr: no active terminal.");
+      return;
+    }
+
+    const revision = this.terminalRevision;
+    const isCurrent = () =>
+      this.terminalRevision === revision && vscode.window.activeTerminal === terminal;
+    try {
+      const text = await this.terminalClipboard.read(kind, isCurrent);
+      if (!isCurrent()) {
+        void vscode.window.showWarningMessage("Herdr: the active terminal changed; nothing was sent.");
+        return;
+      }
+      const payload = text === undefined ? undefined : buildTerminalPayload(terminal.name, kind, text);
+      if (!payload) {
+        const message = kind === "selection"
+          ? "Select text in the active terminal first."
+          : "No completed command could be copied. Enable terminal Shell Integration or send selected text instead.";
+        void vscode.window.showWarningMessage(`Herdr: ${message}`);
+        return;
+      }
+      await this.deliver(payload);
+    } catch (error) {
+      this.handleError(error);
+    }
   }
 
   private async sendEditorContext(uriArg?: vscode.Uri): Promise<void> {
